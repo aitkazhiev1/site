@@ -2,7 +2,7 @@
 
 Продакшн-качественный сайт-запись в барбершоп. Next.js (App Router) + Supabase, с упором на фронтенд.
 
-Статус: **Фаза 1 — инфра и качество** завершена. Функциональность (модель данных, флоу записи, админка) появится в следующих фазах.
+Статус: **Фаза 1 (инфра и качество)** и **Фаза 2 (модель данных, RLS, seed)** завершены. Флоу записи и админка — в следующих фазах.
 
 ## Стек
 
@@ -67,16 +67,72 @@ app/                    # Next.js App Router: страницы, layouts, route h
 components/
   ui/                   # Базовые UI-примитивы (shadcn/ui-стиль): Button, Input, Dialog...
   features/             # Композитные компоненты, привязанные к доменной логике (booking, admin...)
-lib/                    # Утилиты, Supabase-клиенты, доменная логика (слоты, пересечения времени)
-types/                  # Общие TypeScript-типы, включая сгенерированные Supabase-типы (Фаза 2)
+lib/
+  supabase/             # Фабрики Supabase-клиентов (browser/server) + чтение env
+  utils.ts              # cn() и прочие утилиты
+types/
+  database.ts           # Database-тип (сейчас вручную, заменить на supabase gen types после линковки проекта)
+  index.ts               # Удобные алиасы: Barber, Service, Appointment...
 supabase/
   migrations/           # Версионируемые SQL-миграции — единственный способ менять схему БД
+  seed.sql              # Dev/local seed-данные (барберы, услуги, тестовые записи)
 .github/workflows/      # CI
 ```
 
-## Модель данных и безопасность
+## Модель данных
 
-Появятся в Фазе 2: SQL-миграции с RLS-политиками на каждую таблицу, seed-скрипт, защита от двойного бронирования на уровне БД. Подробности будут описаны здесь после реализации.
+Таблицы (см. миграции в [`supabase/migrations/`](supabase/migrations/)):
+
+| Таблица           | Назначение                                                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `profiles`        | Расширяет `auth.users`: `full_name`, `phone`, `role` (`customer` \| `admin`). Создаётся автоматически триггером на `auth.users` при регистрации. |
+| `barbers`         | Барберы: имя, био, аватар, специализации, `active`.                                                                                              |
+| `services`        | Услуги: имя, описание, `duration_min`, `price`, `active`.                                                                                        |
+| `barber_services` | Связь барбер↔услуга (many-to-many).                                                                                                              |
+| `working_hours`   | Регулярное расписание барбера по дням недели (`weekday` 0-6, `start_time`, `end_time`).                                                          |
+| `time_off`        | Разовые блокировки времени (отпуск, больничный).                                                                                                 |
+| `appointments`    | Записи: барбер, услуга, клиент, `start_at`/`end_at`, `status` (`pending`/`confirmed`/`cancelled`/`completed`), `notes`.                          |
+
+### Защита от двойного бронирования
+
+На уровне БД, не только фронта: `appointments` имеет `EXCLUDE`-constraint (`btree_gist`) по `(barber_id, tstzrange(start_at, end_at))` для всех записей кроме `cancelled` — пересекающиеся интервалы для одного барбера физически не могут существовать в таблице одновременно. Проверено вручную: вставка перекрывающейся записи откатывается с `conflicting key value violates exclusion constraint`.
+
+Доступность слотов вычисляется функцией `public.get_available_slots(barber_id, service_id, date)` (SQL, `SECURITY DEFINER`): слот свободен, если попадает в `working_hours`, не пересекается с `time_off`, не пересекается с существующими `appointments` (кроме `cancelled`) и не в прошлом.
+
+### RLS
+
+RLS включён на всех таблицах. Ключевые политики:
+
+- `barbers`, `services` — публично читаемы (`active = true`); полное управление только у `role = 'admin'`.
+- `barber_services` — публично читаемо (нужно для карточки барбера с его услугами на витрине), пишет только admin.
+- `working_hours`, `time_off` — **не** публично читаемы (расписание и причины отсутствия — внутренние данные). Доступность для бронирования отдаётся только через `get_available_slots()`, не через прямой select таблиц.
+- `appointments` — customer видит и создаёт только свои записи (`customer_id = auth.uid()`), может только отменить свою же будущую запись (не может поменять время/барбера/услугу и не может отменить прошедшую — это дополнительно закреплено триггером `enforce_appointment_update`, не только RLS-политикой). admin видит и управляет всем.
+- `profiles` — пользователь видит и редактирует только свою строку и не может сам себе выставить `role = 'admin'` (проверка в `with check`); admin видит и редактирует все.
+- Все admin-проверки идут через `SECURITY DEFINER`-функцию `public.is_admin()`, чтобы избежать рекурсии RLS при проверке роли внутри политики самой же `profiles`.
+
+**Как проверялось:** миграции и seed прогнаны на чистом Postgres 16 в Docker (с застабленной `auth`-схемой) — накатывается без ошибок; вручную проверено, что anon видит только активных барберов и не видит `working_hours`/`appointments`, что customer видит только свои записи и не может ни прочитать, ни отменить чужую, что попытка отменить уже прошедшую запись падает с ошибкой, а admin видит всё.
+
+### Применение миграций
+
+Нужен [Supabase CLI](https://supabase.com/docs/guides/cli) и связанный проект:
+
+```bash
+npx supabase login
+npx supabase link --project-ref <project-ref>
+npx supabase db push          # накатить supabase/migrations/*.sql
+```
+
+Локально с Docker: `npx supabase start`, затем `npx supabase db reset` — накатит миграции и применит `supabase/seed.sql` (тестовые аккаунты `admin@barbershop.test`, `ivan@barbershop.test`, `olga@barbershop.test`, пароль `password123`; **seed только для dev/local**, он пишет напрямую в `auth.users` в обход обычной регистрации).
+
+После первого применения миграций к реальному проекту сгенерировать актуальные типы вместо ручных в [`types/database.ts`](types/database.ts):
+
+```bash
+npx supabase gen types typescript --project-id <project-ref> > types/database.ts
+```
+
+### Supabase-клиенты
+
+[`lib/supabase/client.ts`](lib/supabase/client.ts) — для клиентских компонентов, [`lib/supabase/server.ts`](lib/supabase/server.ts) — для Server Components/Actions/Route Handlers (`@supabase/ssr`, cookie-based сессии). Оба типизированы через `Database` из `types/database.ts`. Client для `middleware.ts` (обновление сессии, защита `/admin`) добавится в Фазе 3 вместе с auth-флоу.
 
 ## Деплой
 

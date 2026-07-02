@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUserAndProfile } from "@/lib/supabase/session";
+import { getCurrentUserAndProfile, isAdmin } from "@/lib/supabase/session";
 
 export const metadata: Metadata = {
   title: {
@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { user, profile } = await getCurrentUserAndProfile();
 
   if (!user) redirect("/login");
-  if (profile?.role !== "admin") redirect("/");
+  if (!isAdmin(profile)) redirect("/");
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">

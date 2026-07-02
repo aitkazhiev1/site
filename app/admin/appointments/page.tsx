@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { StatusSelect } from "@/components/features/admin/StatusSelect";
+import { formatDateTime } from "@/lib/format";
 import type { AppointmentStatus } from "@/types";
 
 export const metadata: Metadata = { title: "Записи" };
@@ -19,15 +20,6 @@ interface Filters {
   date?: string;
   barber_id?: string;
   status?: string;
-}
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export default async function AdminAppointmentsPage({

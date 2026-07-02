@@ -1,6 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
+import { isAdminRole } from "@/lib/supabase/session";
+
+// Build a redirect that carries forward any auth cookies Supabase refreshed
+// during this request. A bare NextResponse.redirect() would drop the Set-Cookie
+// headers written onto `source`, silently breaking the user's refreshed session.
+function redirectTo(request: NextRequest, pathname: string, source: NextResponse) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  const response = NextResponse.redirect(url);
+  source.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+  return response;
+}
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -31,21 +43,17 @@ export async function proxy(request: NextRequest) {
 
     if (request.nextUrl.pathname.startsWith("/admin")) {
       if (!user) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/login";
-        return NextResponse.redirect(url);
+        return redirectTo(request, "/login", supabaseResponse);
       }
 
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (profile?.role !== "admin") {
-        const url = request.nextUrl.clone();
-        url.pathname = "/";
-        return NextResponse.redirect(url);
+      if (!isAdminRole(profile?.role)) {
+        return redirectTo(request, "/", supabaseResponse);
       }
     }
   } catch {

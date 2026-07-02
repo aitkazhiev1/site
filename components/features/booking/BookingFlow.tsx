@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { Barber, Service } from "@/types";
 import { createAppointment } from "@/lib/actions/booking";
 import { isSlotAvailable } from "@/lib/slots";
+import { formatDate, formatDateOnly, formatTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,30 +24,6 @@ interface Slot {
 type Step = "barber" | "service" | "date" | "slot" | "confirm";
 
 const STEP_TRANSITION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatDateOnly(ymd: string) {
-  const [year, month, day] = ymd.split("-").map(Number);
-  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1).toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);

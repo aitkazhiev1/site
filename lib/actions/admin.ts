@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUserAndProfile } from "@/lib/supabase/session";
+import { getCurrentUserAndProfile, isAdmin } from "@/lib/supabase/session";
 import type { AppointmentStatus } from "@/types";
 
 type ActionResult = { error?: string };
@@ -11,7 +11,7 @@ type ActionResult = { error?: string };
 async function requireAdmin(): Promise<{ error: string } | { error?: undefined }> {
   const { user, profile } = await getCurrentUserAndProfile();
   if (!user) return { error: "Необходимо войти в аккаунт" };
-  if (profile?.role !== "admin") return { error: "Недостаточно прав" };
+  if (!isAdmin(profile)) return { error: "Недостаточно прав" };
   return {};
 }
 
@@ -238,11 +238,15 @@ export async function deleteWorkingHours(id: string): Promise<ActionResult> {
   return {};
 }
 
+// start_at / end_at arrive as absolute instants (ISO strings with a timezone
+// offset) — the TimeOffForm converts the admin's local datetime-local input to
+// UTC on the client before submit, so the stored range reflects the wall-clock
+// time the admin actually picked regardless of the server/DB timezone.
 const timeOffSchema = z
   .object({
     barber_id: z.uuid({ error: "Выберите барбера" }),
-    start_at: z.iso.datetime({ error: "Некорректная дата начала", local: true }),
-    end_at: z.iso.datetime({ error: "Некорректная дата окончания", local: true }),
+    start_at: z.iso.datetime({ error: "Некорректная дата начала", offset: true }),
+    end_at: z.iso.datetime({ error: "Некорректная дата окончания", offset: true }),
     reason: z.string().trim().optional(),
   })
   .refine((v) => v.start_at < v.end_at, {

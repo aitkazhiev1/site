@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cancelAppointment } from "@/lib/actions/booking";
+import { formatDateTime } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { AppointmentStatus } from "@/types";
@@ -33,16 +34,6 @@ const statusClass: Record<AppointmentStatus, string> = {
   completed: "bg-accent/15 text-accent",
 };
 
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export function AppointmentsList({ appointments }: { appointments: AppointmentRow[] }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -60,8 +51,11 @@ export function AppointmentsList({ appointments }: { appointments: AppointmentRo
         toast.error(result.error);
       } else {
         toast.success("Запись отменена");
-        router.refresh();
       }
+      // Re-sync with the server on BOTH paths: on success this reflects the
+      // cancellation; on error it discards the optimistic "cancelled" state so
+      // the row snaps back to its real status instead of lying to the user.
+      router.refresh();
     });
   }
 

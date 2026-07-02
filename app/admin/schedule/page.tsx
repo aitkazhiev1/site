@@ -7,6 +7,7 @@ import { WorkingHoursForm } from "@/components/features/admin/WorkingHoursForm";
 import { WorkingHoursDeleteButton } from "@/components/features/admin/WorkingHoursDeleteButton";
 import { TimeOffForm } from "@/components/features/admin/TimeOffForm";
 import { TimeOffDeleteButton } from "@/components/features/admin/TimeOffDeleteButton";
+import { formatDateTimeShort } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Расписание" };
 
@@ -20,15 +21,6 @@ const weekdayLabel: Record<number, string> = {
   6: "Сб",
 };
 
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("ru-RU", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default async function AdminSchedulePage({
   searchParams,
 }: {
@@ -38,7 +30,13 @@ export default async function AdminSchedulePage({
   const supabase = await createClient();
 
   const { data: barbers } = await supabase.from("barbers").select("id, name").order("name");
-  const selectedBarberId = barber_id ?? barbers?.[0]?.id;
+
+  // Only honor the barber_id query param if it refers to a barber that actually
+  // exists; otherwise fall back to the first barber. This prevents a hand-edited
+  // URL from rendering the schedule forms bound to a nonexistent barber_id
+  // (which would only fail later at the FK constraint with a raw DB error).
+  const requestedId = barber_id && barbers?.some((b) => b.id === barber_id) ? barber_id : undefined;
+  const selectedBarberId = requestedId ?? barbers?.[0]?.id;
 
   if (!selectedBarberId) {
     return <p className="text-muted-foreground">Сначала добавьте барбера.</p>;
@@ -119,7 +117,7 @@ export default async function AdminSchedulePage({
                   className="border-border/60 flex items-center justify-between rounded-lg border px-4 py-2 text-sm"
                 >
                   <span>
-                    {formatDateTime(t.start_at)} – {formatDateTime(t.end_at)}
+                    {formatDateTimeShort(t.start_at)} – {formatDateTimeShort(t.end_at)}
                     {t.reason ? ` · ${t.reason}` : ""}
                   </span>
                   <TimeOffDeleteButton timeOffId={t.id} />

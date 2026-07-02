@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCurrentUserAndProfile } from "@/lib/supabase/session";
+import { getCurrentUserAndProfile, isAdmin } from "@/lib/supabase/session";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { MobileNav } from "@/components/features/nav/MobileNav";
@@ -15,13 +15,11 @@ export async function Navbar() {
     // Supabase not configured
   }
 
-  const isAdmin = profile?.role === "admin";
-
   const links = user
     ? [
         { href: "/book", label: "Записаться" },
         { href: "/my-appointments", label: "Мои записи" },
-        ...(isAdmin ? [{ href: "/admin", label: "Админка" }] : []),
+        ...(isAdmin(profile) ? [{ href: "/admin", label: "Админка" }] : []),
       ]
     : [];
 

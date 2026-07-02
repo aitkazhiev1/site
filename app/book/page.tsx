@@ -22,31 +22,21 @@ export default async function BookPage() {
   let barbers: BarberWithServices[] = [];
   try {
     const supabase = await createClient();
-    interface RawBarber {
-      id: string;
-      name: string;
-      bio: string | null;
-      avatar_url: string | null;
-      specialties: string[];
-      active: boolean;
-      barber_services: { services: Service }[];
-    }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from("barbers")
       .select("*, barber_services(services(*))")
       .eq("active", true)
       .order("name");
 
-    barbers = ((data ?? []) as RawBarber[]).map((b) => ({
+    barbers = (data ?? []).map((b) => ({
       id: b.id,
       name: b.name,
       bio: b.bio,
       avatar_url: b.avatar_url,
       specialties: b.specialties,
       active: b.active,
-      services: b.barber_services.map((bs) => bs.services).filter(Boolean),
+      services: b.barber_services.map((bs) => bs.services).filter((s) => s !== null),
     }));
   } catch {
     // Supabase not configured — show empty state

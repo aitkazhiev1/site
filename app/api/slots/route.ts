@@ -21,8 +21,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any).rpc("get_available_slots", {
+    const { data, error } = await supabase.rpc("get_available_slots", {
       p_barber_id: barberId,
       p_service_id: serviceId,
       p_date: date,

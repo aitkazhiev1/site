@@ -32,6 +32,7 @@ export interface Database {
           phone?: string | null;
           role?: UserRole;
         };
+        Relationships: [];
       };
       barbers: {
         Row: {
@@ -58,6 +59,7 @@ export interface Database {
           specialties?: string[];
           active?: boolean;
         };
+        Relationships: [];
       };
       services: {
         Row: {
@@ -84,6 +86,7 @@ export interface Database {
           price?: number;
           active?: boolean;
         };
+        Relationships: [];
       };
       barber_services: {
         Row: {
@@ -98,6 +101,22 @@ export interface Database {
           barber_id?: string;
           service_id?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "barber_services_barber_id_fkey";
+            columns: ["barber_id"];
+            isOneToOne: false;
+            referencedRelation: "barbers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "barber_services_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       working_hours: {
         Row: {
@@ -121,6 +140,15 @@ export interface Database {
           start_time?: string;
           end_time?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "working_hours_barber_id_fkey";
+            columns: ["barber_id"];
+            isOneToOne: false;
+            referencedRelation: "barbers";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       time_off: {
         Row: {
@@ -144,6 +172,15 @@ export interface Database {
           end_at?: string;
           reason?: string | null;
         };
+        Relationships: [
+          {
+            foreignKeyName: "time_off_barber_id_fkey";
+            columns: ["barber_id"];
+            isOneToOne: false;
+            referencedRelation: "barbers";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       appointments: {
         Row: {
@@ -179,6 +216,29 @@ export interface Database {
           notes?: string | null;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "appointments_barber_id_fkey";
+            columns: ["barber_id"];
+            isOneToOne: false;
+            referencedRelation: "barbers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "appointments_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: Record<string, never>;

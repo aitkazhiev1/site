@@ -62,7 +62,7 @@ export default async function MyAppointmentsPage() {
         .eq("customer_id", user.id)
         .order("start_at", { ascending: false });
 
-      appointments = (rows ?? []) as AppointmentRow[];
+      appointments = rows ?? [];
     }
   } catch {
     // Supabase not configured

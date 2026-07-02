@@ -21,8 +21,7 @@ export async function createAppointment(
     } = await supabase.auth.getUser();
     if (!user) return { error: "Необходимо войти в аккаунт" };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from("appointments").insert({
+    const { error } = await supabase.from("appointments").insert({
       barber_id: input.barber_id,
       service_id: input.service_id,
       customer_id: user.id,
@@ -48,8 +47,7 @@ export async function cancelAppointment(appointmentId: string): Promise<{ error?
     } = await supabase.auth.getUser();
     if (!user) return { error: "Необходимо войти в аккаунт" };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("appointments")
       .update({ status: "cancelled" })
       .eq("id", appointmentId)

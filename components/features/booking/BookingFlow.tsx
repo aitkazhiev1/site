@@ -6,6 +6,7 @@ import type { Barber, Service } from "@/types";
 import { createAppointment } from "@/lib/actions/booking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface BarberWithServices extends Barber {
   services: Service[];
@@ -240,7 +241,14 @@ export function BookingFlow({ barbers }: { barbers: BarberWithServices[] }) {
             {barber.name} · {service.name} · {date}
           </p>
           {loadingSlots ? (
-            <p className="text-zinc-400">Загружаем свободное время…</p>
+            <div
+              className="grid grid-cols-3 gap-3 sm:grid-cols-4"
+              aria-label="Загружаем свободное время"
+            >
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-9" />
+              ))}
+            </div>
           ) : slots.length === 0 ? (
             <p className="text-zinc-400">
               На эту дату нет свободного времени. Выберите другую дату.

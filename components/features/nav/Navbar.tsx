@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserAndProfile } from "@/lib/supabase/session";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 
 export async function Navbar() {
   let user = null;
+  let profile = null;
   try {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
+    const result = await getCurrentUserAndProfile();
+    user = result.user;
+    profile = result.profile;
   } catch {
     // Supabase not configured
   }
@@ -32,6 +33,14 @@ export async function Navbar() {
               >
                 Мои записи
               </Link>
+              {profile?.role === "admin" && (
+                <Link
+                  href="/admin"
+                  className="text-sm font-medium text-zinc-600 hover:text-zinc-900"
+                >
+                  Админка
+                </Link>
+              )}
               <form action={signOut}>
                 <Button variant="outline" size="sm" type="submit">
                   Выйти

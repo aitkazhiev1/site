@@ -2,7 +2,7 @@
 
 Продакшн-качественный сайт-запись в барбершоп. Next.js (App Router) + Supabase, с упором на фронтенд.
 
-Статус: **Фаза 1 (инфра и качество)** и **Фаза 2 (модель данных, RLS, seed)** завершены. Флоу записи и админка — в следующих фазах.
+Статус: **Фазы 1-3 завершены** — инфра/качество, модель данных/RLS/seed, и функциональное ядро (витрина, флоу записи, auth, «мои записи», админка) работают end-to-end, проверено вручную против реального Supabase (см. [«Как проверялось»](#как-проверялось-функциональное-ядро)). Wow-слой (дизайн, анимации, SEO, Lighthouse) — Фаза 4.
 
 ## Стек
 
@@ -23,13 +23,26 @@
 
 ## Локальный запуск
 
+Против облачного Supabase-проекта:
+
 ```bash
 npm install
 cp .env.example .env.local   # заполнить значениями из Supabase Dashboard → Settings → API
 npm run dev
 ```
 
-Открыть [http://localhost:3000](http://localhost:3000).
+Против локального Supabase (Docker, ничего не трогает в облаке):
+
+```bash
+npm install
+npx supabase start           # поднимет Postgres/Auth/PostgREST, накатит migrations/ + seed.sql
+# скопировать ANON_KEY и API_URL из вывода команды в .env.local:
+#   NEXT_PUBLIC_SUPABASE_URL=<API_URL>
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY=<ANON_KEY>
+npm run dev
+```
+
+Открыть [http://localhost:3000](http://localhost:3000). Тестовые аккаунты после seed: `admin@barbershop.test` (админка), `ivan@barbershop.test` / `olga@barbershop.test` (клиенты), пароль везде `password123`.
 
 ### Переменные окружения
 
@@ -63,19 +76,30 @@ npm run dev
 ## Структура проекта
 
 ```
-app/                    # Next.js App Router: страницы, layouts, route handlers, server actions
+app/
+  (auth)/login, (auth)/register  # Формы входа/регистрации
+  admin/                # /admin — только role=admin: записи, барберы, услуги, расписание
+  api/slots/            # GET — доступные слоты (вызывает get_available_slots RPC)
+  book/                 # Флоу записи (только для залогиненных)
+  my-appointments/      # Список своих записей + отмена
 components/
-  ui/                   # Базовые UI-примитивы (shadcn/ui-стиль): Button, Input, Dialog...
-  features/             # Композитные компоненты, привязанные к доменной логике (booking, admin...)
+  ui/                   # Базовые UI-примитивы (shadcn/ui-стиль): Button, Input, Select, Skeleton...
+  features/             # booking/, appointments/, nav/, admin/ — компоненты с доменной логикой
 lib/
-  supabase/             # Фабрики Supabase-клиентов (browser/server) + чтение env
+  actions/              # Server actions: auth.ts, booking.ts, admin.ts (все с Zod-валидацией)
+  supabase/             # Фабрики Supabase-клиентов (browser/server), session.ts, env.ts
+  rate-limit.ts         # Простой in-memory rate limiter для бронирования
   utils.ts              # cn() и прочие утилиты
 types/
   database.ts           # Database-тип (сейчас вручную, заменить на supabase gen types после линковки проекта)
-  index.ts               # Удобные алиасы: Barber, Service, Appointment...
+  index.ts              # Удобные алиасы: Barber, Service, Appointment...
 supabase/
   migrations/           # Версионируемые SQL-миграции — единственный способ менять схему БД
   seed.sql              # Dev/local seed-данные (барберы, услуги, тестовые записи)
+  config.toml           # Конфиг локального стека Supabase CLI (analytics/storage/realtime/studio
+                         # отключены — не нужны для разработки и падают в контейнерных средах)
+proxy.ts                 # Next.js 16 переименовал middleware.ts → proxy.ts; обновляет сессию и
+                         # закрывает /admin для не-админов (до рендера, до RLS)
 .github/workflows/      # CI
 ```
 
@@ -110,7 +134,7 @@ RLS включён на всех таблицах. Ключевые полити
 - `profiles` — пользователь видит и редактирует только свою строку и не может сам себе выставить `role = 'admin'` (проверка в `with check`); admin видит и редактирует все.
 - Все admin-проверки идут через `SECURITY DEFINER`-функцию `public.is_admin()`, чтобы избежать рекурсии RLS при проверке роли внутри политики самой же `profiles`.
 
-**Как проверялось:** миграции и seed прогнаны на чистом Postgres 16 в Docker (с застабленной `auth`-схемой) — накатывается без ошибок; вручную проверено, что anon видит только активных барберов и не видит `working_hours`/`appointments`, что customer видит только свои записи и не может ни прочитать, ни отменить чужую, что попытка отменить уже прошедшую запись падает с ошибкой, а admin видит всё.
+Все таблицы также требуют явных `GRANT`: актуальные версии Supabase больше не выдают `anon`/`authenticated` доступ к новым таблицам по умолчанию (RLS ограничивает _строки_, но сам доступ к таблице — отдельная привилегия). Без `supabase/migrations/20260701120007_grants.sql` любой запрос падает с `42501 permission denied`, даже если RLS-политика написана верно.
 
 ### Применение миграций
 
@@ -122,7 +146,7 @@ npx supabase link --project-ref <project-ref>
 npx supabase db push          # накатить supabase/migrations/*.sql
 ```
 
-Локально с Docker: `npx supabase start`, затем `npx supabase db reset` — накатит миграции и применит `supabase/seed.sql` (тестовые аккаунты `admin@barbershop.test`, `ivan@barbershop.test`, `olga@barbershop.test`, пароль `password123`; **seed только для dev/local**, он пишет напрямую в `auth.users` в обход обычной регистрации).
+Локально с Docker: `npx supabase start` (использует [`supabase/config.toml`](supabase/config.toml); analytics/storage/realtime/studio/edge_runtime отключены — не нужны для разработки и падают в некоторых контейнерных средах), затем `npx supabase db reset` — накатит миграции и применит `supabase/seed.sql`. **Seed только для dev/local**: он пишет напрямую в `auth.users` в обход обычной регистрации.
 
 После первого применения миграций к реальному проекту сгенерировать актуальные типы вместо ручных в [`types/database.ts`](types/database.ts):
 
@@ -132,8 +156,35 @@ npx supabase gen types typescript --project-id <project-ref> > types/database.ts
 
 ### Supabase-клиенты
 
-[`lib/supabase/client.ts`](lib/supabase/client.ts) — для клиентских компонентов, [`lib/supabase/server.ts`](lib/supabase/server.ts) — для Server Components/Actions/Route Handlers (`@supabase/ssr`, cookie-based сессии). Оба типизированы через `Database` из `types/database.ts`. Client для `middleware.ts` (обновление сессии, защита `/admin`) добавится в Фазе 3 вместе с auth-флоу.
+[`lib/supabase/client.ts`](lib/supabase/client.ts) — для клиентских компонентов, [`lib/supabase/server.ts`](lib/supabase/server.ts) — для Server Components/Actions/Route Handlers, [`lib/supabase/session.ts`](lib/supabase/session.ts) — получить текущего юзера + его `profiles`-строку одним вызовом (использует и `Navbar`, и `/admin`). Все типизированы через `Database` из `types/database.ts`.
+
+## Функциональное ядро
+
+- **Витрина** (`/`) — список барберов и услуг.
+- **Флоу записи** (`/book`, только для залогиненных): барбер → услуга → дата → доступные слоты (`GET /api/slots` → RPC `get_available_slots`) → подтверждение. Скелетон-лоадер при загрузке слотов, понятные empty/error состояния.
+- **Auth** (`/login`, `/register`) — email + пароль через Supabase Auth, Zod-валидация на сервере в [`lib/actions/auth.ts`](lib/actions/auth.ts).
+- **«Мои записи»** (`/my-appointments`) — список, статусы, отмена (нельзя отменить прошедшую или чужую — проверено и RLS, и триггером `enforce_appointment_update`).
+- **Админка** (`/admin`, только `role = 'admin'`): все записи с фильтрами по дате/барберу/статусу и сменой статуса, CRUD барберов (включая привязку услуг) и услуг, управление расписанием барбера (`working_hours`) и блокировкой времени (`time_off`).
+
+## Безопасность
+
+- **RLS на каждой таблице** (см. выше) — основной барьер, работает независимо от кода приложения.
+- **`/admin` защищён дважды**: `proxy.ts` редиректит неавторизованных/не-админов до рендера страницы (читает `profiles.role`), и каждый admin-server-action в [`lib/actions/admin.ts`](lib/actions/admin.ts) тоже независимо перепроверяет роль — по [явному предупреждению Next.js](https://nextjs.org/docs/app/api-reference/file-conventions/proxy#execution-order), что proxy можно случайно перестать покрывать роут при рефакторинге, поэтому action-и не должны полагаться только на него.
+- **Zod-валидация на сервере** во всех server actions (`auth.ts`, `booking.ts`, `admin.ts`) и в route handler'е — не только на клиенте.
+- **Rate limit** на создании записи ([`lib/rate-limit.ts`](lib/rate-limit.ts)) — простой in-memory sliding window (5 запросов/минуту на пользователя). Годится для одного Node-процесса; для serverless с несколькими инстансами нужен общий стор (Upstash Redis и т.п.) — за рамками MVP.
+- **Заголовки безопасности** в [`next.config.ts`](next.config.ts): CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS.
+- **Секреты**: `SUPABASE_SERVICE_ROLE_KEY` не используется нигде в кодовой базе (весь доступ идёт через anon-ключ + RLS); если появится административный клиент с service_role, он должен остаться строго server-only.
+
+## Как проверялось (функциональное ядро)
+
+Поднят локальный Supabase (Docker: `supabase start`) с реальными миграциями и seed'ом, дев-сервер Next.js указан на него, флоу прогнан headless-браузером (Playwright) как реальный пользователь: логин админом → фильтры и смена статуса записей → CRUD барберов (включая привязку/отвязку услуг) → CRUD услуг → расписание и блокировки времени → логаут → логин клиентом → полный флоу записи от выбора барбера до подтверждения → отмена в «моих записях». Скриншоты на каждом шаге, проверка консоли браузера на ошибки.
+
+Это вскрыло и исправило три реальных бага, которые не ловятся ни линтером, ни тайпчеком:
+
+1. **`supabase/seed.sql` не логинился.** GoTrue сканирует `confirmation_token` и подобные колонки `auth.users` как обычные Go-строки, а не nullable — `NULL` (значение по умолчанию) валит логин с `Database error querying schema`. Нужно было явно проставить пустые строки.
+2. **Все таблицы возвращали `403 permission denied`.** Актуальный Supabase больше не выдаёт `anon`/`authenticated` доступ к новым таблицам автоматически — понадобилась отдельная миграция с `GRANT` (см. выше).
+3. **Бронирование и admin-формы падали с «Некорректный барбер».** `z.uuid()` в Zod проверяет RFC-версию UUID, а seed использовал нестрогие фейковые id вида `20000000-0000-0000-...` (нулевой version-nibble). Поправлено на валидные v4-формата id (`...-0000-4000-8000-...`) — так, как их реально генерирует `gen_random_uuid()`.
 
 ## Деплой
 
-Vercel + Supabase cloud. Ссылка появится после Фазы 3 (рабочее функциональное ядро).
+Vercel + Supabase cloud. Live-ссылка появится после Фазы 4 (полировка) — деплой раньше времени не даёт ничего проверить, чего нельзя проверить локально.

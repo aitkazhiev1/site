@@ -1,4 +1,6 @@
 import Link from "next/link";
+import Image from "next/image";
+import { Scissors } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,24 +32,33 @@ export default async function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-zinc-900 px-6 py-24 text-white">
+      <section className="relative overflow-hidden px-6 py-28 sm:py-36">
+        <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            background:
+              "radial-gradient(60% 50% at 50% 0%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent)",
+          }}
+          aria-hidden
+        />
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-5xl font-bold tracking-tight">Стрижка, которую вы заслуживаете</h1>
-          <p className="mt-6 text-lg text-zinc-300">
+          <p className="text-accent mb-4 text-sm font-medium tracking-[0.2em] uppercase">
+            Барбершоп премиум-класса
+          </p>
+          <h1 className="font-display text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
+            Стрижка, которую вы заслуживаете
+          </h1>
+          <p className="text-muted-foreground mx-auto mt-6 max-w-xl text-lg">
             Запишитесь онлайн к лучшим мастерам. Без очередей, в удобное время.
           </p>
-          <div className="mt-10 flex justify-center gap-4">
+          <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <Link href="/register">
-              <Button size="lg" className="bg-white text-zinc-900 hover:bg-zinc-100">
+              <Button size="lg" className="w-full sm:w-auto">
                 Записаться
               </Button>
             </Link>
             <Link href="#barbers">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/30 bg-transparent text-white hover:bg-white/10"
-              >
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
                 Наши мастера
               </Button>
             </Link>
@@ -57,23 +68,28 @@ export default async function HomePage() {
 
       {/* Barbers */}
       <section id="barbers" className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="mb-10 text-3xl font-bold text-zinc-900">Наши мастера</h2>
+        <h2 className="font-display mb-10 text-3xl font-semibold">Наши мастера</h2>
         {barbers.length === 0 ? (
-          <p className="text-zinc-400">Мастера появятся здесь после подключения Supabase.</p>
+          <EmptyState message="Мастера появятся здесь после подключения Supabase." />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {barbers.map((barber) => (
               <Card key={barber.id} className="overflow-hidden">
                 {barber.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={barber.avatar_url}
-                    alt={barber.name}
-                    className="h-48 w-full object-cover"
-                  />
+                  <div className="relative h-48 w-full">
+                    <Image
+                      src={barber.avatar_url}
+                      alt={barber.name}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
                 ) : (
-                  <div className="flex h-48 items-center justify-center bg-zinc-100">
-                    <span className="text-5xl font-bold text-zinc-300">{barber.name[0]}</span>
+                  <div className="bg-muted flex h-48 items-center justify-center">
+                    <span className="font-display text-accent/70 text-5xl font-semibold">
+                      {barber.name[0]}
+                    </span>
                   </div>
                 )}
                 <CardHeader>
@@ -84,7 +100,7 @@ export default async function HomePage() {
                 </CardHeader>
                 {barber.bio && (
                   <CardContent>
-                    <p className="text-sm text-zinc-500">{barber.bio}</p>
+                    <p className="text-muted-foreground text-sm">{barber.bio}</p>
                   </CardContent>
                 )}
               </Card>
@@ -94,11 +110,11 @@ export default async function HomePage() {
       </section>
 
       {/* Services */}
-      <section className="bg-white px-6 py-20">
+      <section className="border-border/60 border-t px-6 py-20">
         <div className="mx-auto max-w-6xl">
-          <h2 className="mb-10 text-3xl font-bold text-zinc-900">Услуги</h2>
+          <h2 className="font-display mb-10 text-3xl font-semibold">Услуги</h2>
           {services.length === 0 ? (
-            <p className="text-zinc-400">Услуги появятся здесь после подключения Supabase.</p>
+            <EmptyState message="Услуги появятся здесь после подключения Supabase." />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {services.map((service) => (
@@ -111,8 +127,10 @@ export default async function HomePage() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-zinc-500">{service.duration_min} мин</span>
-                      <span className="font-semibold text-zinc-900">
+                      <span className="text-muted-foreground text-sm">
+                        {service.duration_min} мин
+                      </span>
+                      <span className="font-display text-accent font-semibold">
                         {service.price.toLocaleString("ru-RU")} ₸
                       </span>
                     </div>
@@ -128,6 +146,15 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="border-border flex flex-col items-center gap-3 rounded-2xl border border-dashed py-16 text-center">
+      <Scissors className="text-muted-foreground h-8 w-8" aria-hidden />
+      <p className="text-muted-foreground">{message}</p>
     </div>
   );
 }

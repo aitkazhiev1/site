@@ -64,17 +64,17 @@ export function ServiceForm({ initial }: { initial?: ServiceFormValues }) {
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-zinc-700">
+      <label className="text-foreground flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           name="active"
           defaultChecked={initial?.active ?? true}
-          className="rounded border-zinc-300"
+          className="border-border accent-accent rounded"
         />
         Активна (видна на витрине)
       </label>
 
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state?.error && <p className="text-destructive text-sm">{state.error}</p>}
 
       <Button type="submit" disabled={pending}>
         {pending ? "Сохраняем…" : initial?.id ? "Сохранить" : "Добавить услугу"}

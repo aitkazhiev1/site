@@ -33,7 +33,11 @@ export function LoginForm() {
           autoComplete="current-password"
         />
       </div>
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state?.error && (
+        <p role="alert" className="text-destructive text-sm">
+          {state.error}
+        </p>
+      )}
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Входим…" : "Войти"}
       </Button>

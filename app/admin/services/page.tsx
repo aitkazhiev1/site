@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ServiceForm } from "@/components/features/admin/ServiceForm";
 import { ServiceDeleteButton } from "@/components/features/admin/ServiceDeleteButton";
+
+export const metadata: Metadata = { title: "Услуги" };
 
 export default async function AdminServicesPage() {
   const supabase = await createClient();
@@ -19,7 +22,9 @@ export default async function AdminServicesPage() {
       </Card>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error.message}</p>
+        <p className="bg-destructive/10 text-destructive rounded-lg px-4 py-3 text-sm">
+          {error.message}
+        </p>
       )}
 
       <div className="space-y-4">
@@ -27,7 +32,8 @@ export default async function AdminServicesPage() {
           <Card key={service.id}>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>
-                {service.name} {!service.active && <span className="text-zinc-400">(скрыта)</span>}
+                {service.name}{" "}
+                {!service.active && <span className="text-muted-foreground">(скрыта)</span>}
               </CardTitle>
               <ServiceDeleteButton serviceId={service.id} />
             </CardHeader>

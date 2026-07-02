@@ -27,7 +27,7 @@ export function TimeOffForm({ barberId }: { barberId: string }) {
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? "…" : "Заблокировать"}
       </Button>
-      {state?.error && <p className="w-full text-sm text-red-600">{state.error}</p>}
+      {state?.error && <p className="text-destructive w-full text-sm">{state.error}</p>}
     </form>
   );
 }

@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { StatusSelect } from "@/components/features/admin/StatusSelect";
 import type { AppointmentStatus } from "@/types";
+
+export const metadata: Metadata = { title: "Записи" };
 
 const statusLabel: Record<AppointmentStatus, string> = {
   pending: "Ожидает",
@@ -58,9 +61,9 @@ export default async function AdminAppointmentsPage({
 
   return (
     <div>
-      <form className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-zinc-100 bg-white p-4">
+      <form className="border-border bg-card mb-6 flex flex-wrap items-end gap-3 rounded-2xl border p-4">
         <div className="space-y-1">
-          <label className="text-xs font-medium text-zinc-500" htmlFor="date">
+          <label className="text-muted-foreground text-xs font-medium" htmlFor="date">
             Дата
           </label>
           <input
@@ -68,11 +71,11 @@ export default async function AdminAppointmentsPage({
             name="date"
             type="date"
             defaultValue={filters.date ?? ""}
-            className="flex h-10 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-zinc-900 focus:outline-none"
+            className="border-border bg-surface text-foreground focus:border-accent/50 focus:ring-ring focus:ring-offset-background flex h-10 rounded-lg border px-3 py-2 text-sm transition-colors duration-200 focus:ring-2 focus:ring-offset-1 focus:outline-none"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-zinc-500" htmlFor="barber_id">
+          <label className="text-muted-foreground text-xs font-medium" htmlFor="barber_id">
             Барбер
           </label>
           <Select id="barber_id" name="barber_id" defaultValue={filters.barber_id ?? ""}>
@@ -85,7 +88,7 @@ export default async function AdminAppointmentsPage({
           </Select>
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-zinc-500" htmlFor="status">
+          <label className="text-muted-foreground text-xs font-medium" htmlFor="status">
             Статус
           </label>
           <Select id="status" name="status" defaultValue={filters.status ?? ""}>
@@ -103,12 +106,16 @@ export default async function AdminAppointmentsPage({
       </form>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error.message}</p>
+        <p className="bg-destructive/10 text-destructive rounded-lg px-4 py-3 text-sm">
+          {error.message}
+        </p>
       )}
 
       {!error && (appointments ?? []).length === 0 ? (
         <Card>
-          <CardContent className="py-16 text-center text-zinc-400">Записей не найдено.</CardContent>
+          <CardContent className="text-muted-foreground py-16 text-center">
+            Записей не найдено.
+          </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -116,15 +123,15 @@ export default async function AdminAppointmentsPage({
             <Card key={a.id}>
               <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
                 <div className="space-y-1">
-                  <p className="font-medium text-zinc-900">
+                  <p className="text-foreground font-medium">
                     {a.barbers?.name ?? "—"} · {a.services?.name ?? "—"}
                   </p>
-                  <p className="text-sm text-zinc-500">{formatDateTime(a.start_at)}</p>
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-muted-foreground text-sm">{formatDateTime(a.start_at)}</p>
+                  <p className="text-muted-foreground text-sm">
                     {a.profiles?.full_name ?? "Без имени"}
                     {a.profiles?.phone ? ` · ${a.profiles.phone}` : ""}
                   </p>
-                  {a.notes && <p className="text-sm text-zinc-400">Заметка: {a.notes}</p>}
+                  {a.notes && <p className="text-muted-foreground text-sm">Заметка: {a.notes}</p>}
                 </div>
                 <StatusSelect appointmentId={a.id} status={a.status} />
               </CardContent>

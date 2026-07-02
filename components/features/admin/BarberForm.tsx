@@ -69,15 +69,15 @@ export function BarberForm({
       {services.length > 0 && (
         <div className="space-y-1.5">
           <Label>Услуги</Label>
-          <div className="grid grid-cols-2 gap-2 rounded-lg border border-zinc-200 p-3">
+          <div className="border-border grid grid-cols-2 gap-2 rounded-lg border p-3">
             {services.map((s) => (
-              <label key={s.id} className="flex items-center gap-2 text-sm text-zinc-700">
+              <label key={s.id} className="text-foreground flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   name="service_ids"
                   value={s.id}
                   defaultChecked={selectedServiceIds.has(s.id)}
-                  className="rounded border-zinc-300"
+                  className="border-border accent-accent rounded"
                 />
                 {s.name}
               </label>
@@ -86,17 +86,17 @@ export function BarberForm({
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-sm text-zinc-700">
+      <label className="text-foreground flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           name="active"
           defaultChecked={initial?.active ?? true}
-          className="rounded border-zinc-300"
+          className="border-border accent-accent rounded"
         />
         Активен (виден на витрине)
       </label>
 
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state?.error && <p className="text-destructive text-sm">{state.error}</p>}
 
       <Button type="submit" disabled={pending}>
         {pending ? "Сохраняем…" : initial?.id ? "Сохранить" : "Добавить барбера"}

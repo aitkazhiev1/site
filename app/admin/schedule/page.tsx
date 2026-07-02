@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -6,6 +7,8 @@ import { WorkingHoursForm } from "@/components/features/admin/WorkingHoursForm";
 import { WorkingHoursDeleteButton } from "@/components/features/admin/WorkingHoursDeleteButton";
 import { TimeOffForm } from "@/components/features/admin/TimeOffForm";
 import { TimeOffDeleteButton } from "@/components/features/admin/TimeOffDeleteButton";
+
+export const metadata: Metadata = { title: "Расписание" };
 
 const weekdayLabel: Record<number, string> = {
   0: "Вс",
@@ -38,7 +41,7 @@ export default async function AdminSchedulePage({
   const selectedBarberId = barber_id ?? barbers?.[0]?.id;
 
   if (!selectedBarberId) {
-    return <p className="text-zinc-400">Сначала добавьте барбера.</p>;
+    return <p className="text-muted-foreground">Сначала добавьте барбера.</p>;
   }
 
   const [{ data: workingHours }, { data: timeOff }] = await Promise.all([
@@ -59,7 +62,7 @@ export default async function AdminSchedulePage({
     <div className="space-y-8">
       <form className="flex items-end gap-3">
         <div className="space-y-1">
-          <label className="text-xs font-medium text-zinc-500" htmlFor="barber_id">
+          <label className="text-muted-foreground text-xs font-medium" htmlFor="barber_id">
             Барбер
           </label>
           <Select id="barber_id" name="barber_id" defaultValue={selectedBarberId}>
@@ -81,12 +84,12 @@ export default async function AdminSchedulePage({
           <WorkingHoursForm barberId={selectedBarberId} />
           <div className="space-y-2">
             {(workingHours ?? []).length === 0 ? (
-              <p className="text-sm text-zinc-400">Расписание не задано.</p>
+              <p className="text-muted-foreground text-sm">Расписание не задано.</p>
             ) : (
               (workingHours ?? []).map((wh) => (
                 <div
                   key={wh.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-100 px-4 py-2 text-sm"
+                  className="border-border/60 flex items-center justify-between rounded-lg border px-4 py-2 text-sm"
                 >
                   <span>
                     {weekdayLabel[wh.weekday]}: {wh.start_time.slice(0, 5)}–
@@ -108,12 +111,12 @@ export default async function AdminSchedulePage({
           <TimeOffForm barberId={selectedBarberId} />
           <div className="space-y-2">
             {(timeOff ?? []).length === 0 ? (
-              <p className="text-sm text-zinc-400">Блокировок нет.</p>
+              <p className="text-muted-foreground text-sm">Блокировок нет.</p>
             ) : (
               (timeOff ?? []).map((t) => (
                 <div
                   key={t.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-100 px-4 py-2 text-sm"
+                  className="border-border/60 flex items-center justify-between rounded-lg border px-4 py-2 text-sm"
                 >
                   <span>
                     {formatDateTime(t.start_at)} – {formatDateTime(t.end_at)}

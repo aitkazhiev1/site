@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 export function DeleteButton({
@@ -22,7 +23,9 @@ export function DeleteButton({
       const result = await onDelete();
       if (result.error) {
         setError(result.error);
+        toast.error(result.error);
       } else {
+        toast.success("Удалено");
         router.refresh();
       }
     });
@@ -35,11 +38,11 @@ export function DeleteButton({
         size="sm"
         onClick={handleClick}
         disabled={pending}
-        className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+        className="border-destructive/30 text-destructive hover:bg-destructive/10"
       >
         {pending ? "…" : "Удалить"}
       </Button>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && <p className="text-destructive mt-1 text-xs">{error}</p>}
     </div>
   );
 }

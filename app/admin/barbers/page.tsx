@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarberForm } from "@/components/features/admin/BarberForm";
 import { BarberDeleteButton } from "@/components/features/admin/BarberDeleteButton";
+
+export const metadata: Metadata = { title: "Барберы" };
 
 export default async function AdminBarbersPage() {
   const supabase = await createClient();
@@ -25,7 +28,9 @@ export default async function AdminBarbersPage() {
       </Card>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error.message}</p>
+        <p className="bg-destructive/10 text-destructive rounded-lg px-4 py-3 text-sm">
+          {error.message}
+        </p>
       )}
 
       <div className="space-y-4">
@@ -33,7 +38,8 @@ export default async function AdminBarbersPage() {
           <Card key={barber.id}>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>
-                {barber.name} {!barber.active && <span className="text-zinc-400">(скрыт)</span>}
+                {barber.name}{" "}
+                {!barber.active && <span className="text-muted-foreground">(скрыт)</span>}
               </CardTitle>
               <BarberDeleteButton barberId={barber.id} />
             </CardHeader>

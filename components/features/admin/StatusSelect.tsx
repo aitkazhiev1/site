@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { updateAppointmentStatus } from "@/lib/actions/admin";
 import { Select } from "@/components/ui/select";
 import type { AppointmentStatus } from "@/types";
@@ -31,7 +32,9 @@ export function StatusSelect({
       const result = await updateAppointmentStatus(appointmentId, next);
       if (result.error) {
         setError(result.error);
+        toast.error(result.error);
       } else {
+        toast.success("Статус обновлён");
         router.refresh();
       }
     });
@@ -46,7 +49,7 @@ export function StatusSelect({
           </option>
         ))}
       </Select>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && <p className="text-destructive mt-1 text-xs">{error}</p>}
     </div>
   );
 }

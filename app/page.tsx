@@ -26,8 +26,20 @@ async function getServices(): Promise<Service[]> {
   }
 }
 
+async function getUser() {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user;
+  } catch {
+    return null;
+  }
+}
+
 export default async function HomePage() {
-  const [barbers, services] = await Promise.all([getBarbers(), getServices()]);
+  const [barbers, services, user] = await Promise.all([getBarbers(), getServices(), getUser()]);
 
   return (
     <div>
@@ -52,7 +64,7 @@ export default async function HomePage() {
             Запишитесь онлайн к лучшим мастерам. Без очередей, в удобное время.
           </p>
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
-            <Link href="/register">
+            <Link href={user ? "/book" : "/register"}>
               <Button size="lg" className="w-full sm:w-auto">
                 Записаться
               </Button>
